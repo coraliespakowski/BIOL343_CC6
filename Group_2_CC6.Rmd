@@ -154,7 +154,18 @@ Plot longitude by region. Calculate the correlations among the five continuous c
 
 ```{r collinearity}
 # plot longitude by region
+ggplot(data = lythrum_ce, aes(y = longitude, x = region, fill = region)) +
+  geom_col() +
+  labs(x = "Region", y = "Longitude") +
+  theme_classic()
 
+# calculate correlations amond the five continuous columns
+
+# fit three linear models of damage:
+# region
+# longitude
+# region and longitude
+# print summaries
 ```
 
 **Question 4:** Which two predictors are collinear, and why would you expect that from how the regions are defined? Does your correlation table show it? Compare the estimates, standard errors and *p*-values for region and longitude across the three models. Why does the model with both predictors find "significant" effects that neither predictor shows alone? Which predictor would you keep, and why?
@@ -168,7 +179,19 @@ Plot longitude by region. Calculate the correlations among the five continuous c
 Hypothesis 3 says that beetle damage reduces the abundance of the plant and changes its growth form. Fit three linear models, one for each plant measure (stem density, stem height and inflorescences) as the response, each with damage as the only predictor, and print the three summaries.
 
 ```{r three-tests}
+# linear model for stem density with damage as predictor
+lm_density <- lm(stemsper50m2 ~ damage, lythrum_ce)
 
+# linear model for stem height with damage as predictor
+lm_height <- lm(stemheight_cm ~ damage, lythrum_ce)
+
+# linear model for inflorescence with damage as predictor
+lm_inflo <- lm(inflorescences ~ damage, lythrum_ce)
+
+# print summaries
+summary(lm_density)
+summary(lm_height)
+summary(lm_inflo)
 ```
 
 **Question 5:** Do any of the three models support hypothesis 3? Suppose damage had no effect at all on any of the three measures. What is the probability that at least one of three independent tests gives *p* < 0.05 by chance? What does that mean for a study that tests many responses or many predictors?
