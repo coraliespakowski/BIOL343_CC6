@@ -56,14 +56,25 @@ As in earlier challenges, the tasks tell you **what** to produce, not which func
 Import the data as an object called `lythrum` and check its structure. Then use `dplyr` to keep only the **Central** and **East** sites, save the result as `lythrum_ce`, and count the sites in each combination of region and release. Use `lythrum_ce` for the rest of the challenge.
 
 ```{r import-data}
+# library import
+library(tidyverse)
+
 # lythrum <-
+lythrum <- read.csv(
+  "/Users/coraliespakowski/Desktop/BIOL 343/BIOL343_CC6/Data/loosestrife.csv"
+)
 
 # lythrum_ce <-
+lythrum_ce <- lythrum %>%
+  filter(when_any(region == "Central", region == "East"))
+
+# count sites in each combination
+lythrum_ce %>% count(region, release)
 ```
 
 **Question 1:** How many sites are in each of the four combinations of region and release? Why might the small number of release sites be a problem when you test region and release in the same model?
 
-**Answer:**
+**Answer:** There are 17 sites in Central-Nonrelease combination, 3 in Central-Release, 14 in East-Nonrelease, and 4 in East-Release. The small number of release sites might be a problem when you test region and release in the same model because **XXX**
 
 # Part 2 — Interaction terms {-}
 
@@ -72,6 +83,12 @@ Import the data as an object called `lythrum` and check its structure. Then use 
 Draw a boxplot of damage by region, filled by release, with axis labels and a clean theme. Calculate the mean damage of each of the four region × release groups. Then fit a linear model of damage with region, release **and their interaction** as predictors, and print the summary and the ANOVA table.
 
 ```{r two-categorical}
+# boxplot of damage by region
+ggplot(data = lythrum_ce, aes(x = region, y = damage, fill = release)) +
+  geom_boxplot() +
+  theme_classic() +
+  labs(x = "Region", y = "Damage", fill = "Release")
+
 # int_mod <-
 ```
 
