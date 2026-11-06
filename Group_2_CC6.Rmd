@@ -17,12 +17,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r group_members}
 # Name - Queen's Student Number
 
-# 1. Kaylee Ellwood
-# 2. Alex Galentovsky
-# 3. Margo Kaminska
-# 4. Noah Lu
-# 5. Coralie Spakowski
-# 6. Tianyi Wang
+# 1. Kaylee Ellwood - 20391007
+# 2. Margo Kaminska - 20449041
+# 3. Noah Lu - 20483156
+# 4. Coralie Spakowski - 20471806
+# 5. Tianyi Wang - 20386987
 
 ```
 
@@ -61,7 +60,7 @@ library(tidyverse)
 
 # lythrum <-
 lythrum <- read.csv(
-  "/Users/coraliespakowski/Desktop/BIOL 343/BIOL343_CC6/Data/loosestrife.csv"
+  "/Users/coraliespakowski/Desktop/BIOL 343/BIOL343_CC6/data/loosestrife.csv"
 )
 
 # lythrum_ce <-
@@ -74,7 +73,7 @@ lythrum_ce %>% count(region, release)
 
 **Question 1:** How many sites are in each of the four combinations of region and release? Why might the small number of release sites be a problem when you test region and release in the same model?
 
-**Answer:** There are 17 sites in Central-Nonrelease combination, 3 in Central-Release, 14 in East-Nonrelease, and 4 in East-Release. The small number of release sites might be a problem when you test region and release in the same model because **XXX**
+**Answer:** There are 17 sites in Central-Nonrelease combination, 3 in Central-Release, 14 in East-Nonrelease, and 4 in East-Release. The small number of release sites might be a problem when you test region and release in the same model because less observations, less precise.
 
 # Part 2 — Interaction terms {-}
 
@@ -130,7 +129,7 @@ ggplot(data = lythrum_ce, aes(y = damage, x = latitude, colour = release)) +
   geom_point() +
   labs(y = "Damage Score, 0-5", x = "Latitude, °N", colour = "Release Status") +
   theme_classic() +
-  geom_smooth(method = "lm", formula = y ~ x, se = F)
+  geom_smooth(method = "lm", formula = y ~ x)
 
 # lat_mod <-
 lat_mod <- lm(damage ~ latitude * release, data = lythrum_ce)
@@ -157,10 +156,11 @@ Plot longitude by region. Calculate the correlations among the five continuous c
 
 ```{r collinearity}
 # plot longitude by region
-ggplot(data = lythrum_ce, aes(y = longitude, x = region, fill = region)) +
-  geom_boxplot() +
-  labs(x = "Region", y = "Longitude") +
-  theme_classic()
+ggplot(data = lythrum_ce, aes(y = damage, x = longitude, colour = region)) +
+  geom_point() +
+  labs(x = "Longitude (degrees)", y = "Damage (0-5)", colour = "Region") +
+  theme_classic() +
+  geom_smooth(method = "lm", formula = y ~ x)
 
 # calculate correlations amond the five continuous columns
 lythrum_ce %>%
@@ -190,7 +190,7 @@ When examining the three models, neither region alone (p = 0.707) nor longitude 
 
 This occurs because region and longitude share explanatory information. Including both predictors allows the model to estimate the effect of each while accounting for the other, potentially revealing conditional relationships that were not apparent when the predictors were examined separately. However, the substantial changes in the estimates suggest possible multicollinearity, which can make the individual coefficients unstable.
 
-I would keep region and remove longitude because region is more directly related to the biological hypothesis being investigated and is easier to interpret. Including both predictors may introduce unnecessary multicollinearity because they represent overlapping geographical information.
+I would keep region and remove longitude because region is more directly related to the biological hypothesis being investigated and is easier to interpret.
 
 # Part 4 — False positives and model accuracy {-}
 
@@ -233,9 +233,7 @@ lythrum_ce <- lythrum_ce %>%
   mutate(predicted_release = ifelse(damage >= 3, "Release", "Nonrelease"))
 
 # table of predicted against actual
-lythrum_ce %>%
-  count(predicted_release, release) %>%
-  tidyr::pivot_wider(names_from = release, values_from = n, values_fill = 0)
+table(Predicted = lythrum_ce$predicted_release, Actual = lythrum_ce$release)
 
 # count true positives, false positives, true negatives, and false negatives
 results <- lythrum_ce %>%
