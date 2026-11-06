@@ -116,13 +116,9 @@ Central-Release: 2.2020 + 1.1456 = 3.3476
 East-Nonrelease: 2.2020 + 0.1677 = 2.3697
 East-Release: 2.2020 + 1.1456 + 0.1677 - 0.6140 = 2.9013
 
-The interaction is **XXX** and it is **SIGNIFICANT?**
+The interaction between region and release was negative (-0.6140), but it was not statistically significant (p = 0.4168). This indicates that there is insufficient evidence that the effect of biocontrol agent release on beetle damage differs between the Central and East regions.
 
-Given the hypotheses 1 and 2: 
-1. Beetle damage is lower in the region where the host plant is more sparsely distributed (Central) than where it is dense (East).
-2. Damage is higher at sites where the biocontrol agents were deliberately released than at sites where they were not.
-
-We can conclude that **XXX**
+Regarding the hypotheses, Hypothesis 1 was not supported because beetle damage was not significantly different between the Central and East regions (p = 0.6939), despite the observed means being slightly lower in Central. Hypothesis 2 was supported because beetle damage was significantly higher at release sites than at nonrelease sites (p = 0.0367).
 
 # A continuous and a categorical predictor
 
@@ -146,6 +142,13 @@ anova(lat_mod)
 
 **Answer:**
 
+Nonrelease sites: $Damage = 43.5218 - 0.9226(latitude)$
+Release sites: $Damage = 19.3913 - 0.3665(latitude)$
+
+The interaction estimate is 0.5561, meaning that the slope of damage against latitude is 0.5561 units more positive at release sites compared to non-release sites. This indicates that damage decreases less steeply with increasing latitude at release sites.
+
+However, there is no statistically significant evidence that the slopes differ between release and non-release sites (p = 0.48741), since the p-value is greater than 0.05. Therefore, we cannot conclude that the relationship between latitude and beetle damage differs depending on whether biocontrol agents were released.
+
 # Part 3 — Collinearity {-}
 
 # Region and longitude
@@ -155,22 +158,39 @@ Plot longitude by region. Calculate the correlations among the five continuous c
 ```{r collinearity}
 # plot longitude by region
 ggplot(data = lythrum_ce, aes(y = longitude, x = region, fill = region)) +
-  geom_col() +
+  geom_boxplot() +
   labs(x = "Region", y = "Longitude") +
   theme_classic()
 
 # calculate correlations amond the five continuous columns
+lythrum_ce %>%
+  select(latitude, longitude, stemsper50m2, stemheight_cm, inflorescences) %>%
+  cor()
 
 # fit three linear models of damage:
 # region
+lm_region <- lm(damage ~ region, lythrum_ce)
 # longitude
+lm_longitude <- lm(damage ~ longitude, lythrum_ce)
 # region and longitude
+lm_both <- lm(damage ~ region + longitude, lythrum_ce)
 # print summaries
+summary(lm_region)
+summary(lm_longitude)
+summary(lm_both)
 ```
 
 **Question 4:** Which two predictors are collinear, and why would you expect that from how the regions are defined? Does your correlation table show it? Compare the estimates, standard errors and *p*-values for region and longitude across the three models. Why does the model with both predictors find "significant" effects that neither predictor shows alone? Which predictor would you keep, and why?
 
 **Answer:**
+
+The two predictors that are likely collinear are region and longitude. This is expected because the Central and East regions are geographically separated, meaning that longitude is likely strongly associated with which region a site belongs to. The correlation table does not directly show this relationship because region is categorical and was not included in the correlation analysis.
+
+When examining the three models, neither region alone (p = 0.707) nor longitude alone (p = 0.510) significantly explained beetle damage. However, when both predictors were included, region (p = 0.0395) and longitude (p = 0.0334) became statistically significant. Their coefficient estimates also changed considerably.
+
+This occurs because region and longitude share explanatory information. Including both predictors allows the model to estimate the effect of each while accounting for the other, potentially revealing conditional relationships that were not apparent when the predictors were examined separately. However, the substantial changes in the estimates suggest possible multicollinearity, which can make the individual coefficients unstable.
+
+I would keep region and remove longitude because region is more directly related to the biological hypothesis being investigated and is easier to interpret. Including both predictors may introduce unnecessary multicollinearity because they represent overlapping geographical information.
 
 # Part 4 — False positives and model accuracy {-}
 
@@ -196,19 +216,58 @@ summary(lm_inflo)
 
 **Question 5:** Do any of the three models support hypothesis 3? Suppose damage had no effect at all on any of the three measures. What is the probability that at least one of three independent tests gives *p* < 0.05 by chance? What does that mean for a study that tests many responses or many predictors?
 
-**Answer:**
+**Answer:** 
+
+None of the three models supports Hypothesis 3 because none of the relationships between beetle damage and the plant characteristics (stem density, stem height, and inflorescence number) was statistically significant. All three p-values were greater than 0.05.
+
+If damage had no effect on any of the three measures and the tests were independent, the probability of obtaining at least one significant result by chance would be 1 - (0.95)³ = 0.1426, or approximately 14.26%. What this means is that for a study that tests many responses/predictors, there is an inflation of type I errors (false positives). Therefore, studies that test many responses or predictors should consider using multiple-testing corrections, such as the Bonferroni or Holm correction, to reduce the risk of incorrectly identifying significant relationships.
+
 
 # How good is a quick field check?
 
 A manager suggests a cheap way to tell whether beetles were released at a site without checking the records: call it a release site if its damage index is **3 or more**. Add a column to `lythrum_ce` with this prediction, and make a table of the predicted against the actual release status. Treating "release" as a positive result, count the true positives, false positives, true negatives and false negatives, and calculate the accuracy, sensitivity, specificity and false discovery rate of the check.
 
 ```{r accuracy}
+# new prediction column
+lythrum_ce <- lythrum_ce %>%
+  mutate(predicted_release = ifelse(damage >= 3, "Release", "Nonrelease"))
 
+# table of predicted against actual
+lythrum_ce %>%
+  count(predicted_release, release) %>%
+  tidyr::pivot_wider(names_from = release, values_from = n, values_fill = 0)
+
+# count true positives, false positives, true negatives, and false negatives
+results <- lythrum_ce %>%
+  summarise(
+    TP = sum(predicted_release == "Release" & release == "Release"),
+    FP = sum(predicted_release == "Release" & release == "Nonrelease"),
+    TN = sum(predicted_release == "Nonrelease" & release == "Nonrelease"),
+    FN = sum(predicted_release == "Nonrelease" & release == "Release")
+  )
+
+# calculate accuracy, sensitivity, specificity, and false discovery rate
+results <- results %>%
+  mutate(
+    accuracy = (TP + TN) / (TP + FP + TN + FN),
+    sensitivity = TP / (TP + FN),
+    specificity = TN / (TN + FP),
+    false_discovery_rate = FP / (TP + FP)
+  )
+
+# display results
+results
 ```
 
 **Question 6:** Report the four rates. Why is the false discovery rate so much higher than you might expect from the accuracy? If the manager's goal is to find **every** release site so that it can be monitored, should the check be more sensitive or more specific, and which way would you move the threshold of 3?
 
-**Answer:**
+**Answer:** 
+
+The four classification rates are accuracy, sensitivity, specificity, and false discovery rate, calculated from the confusion matrix. Accuracy measures the overall proportion of correctly classified sites, while the false discovery rate measures the proportion of sites predicted to be release sites that were actually nonrelease sites.
+
+The false discovery rate can be relatively high despite reasonable accuracy because release sites may be less common than nonrelease sites. Therefore, false positives can represent a large proportion of all sites predicted to be release sites, even if most sites overall are classified correctly.
+
+If the manager's goal is to identify every release site for monitoring, the check should prioritize sensitivity over specificity. High sensitivity reduces the number of false negatives, meaning fewer actual release sites are missed. I would therefore lower the damage threshold from 3. This would classify more sites as release sites, increasing the likelihood of identifying all actual release sites, although it may also increase false positives.
 
 # DO THIS LAST {-}
 
